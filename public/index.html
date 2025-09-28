@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RadAnalyzer Flashcards</title>
+    <link rel="icon" type="image/png" href="alpha_icon_square.png">
+    <link rel="stylesheet" href="styles.css?v=6">
+</head>
+<body>
+    <div class="container">
+        <div id="loginSection" class="section">
+            <div class="login-container">
+                <div class="logo-container">
+                    <img src="alpha_icon_square.png" alt="RadAnalyzer" class="logo" style="width: 48px; height: 48px; max-width: 48px; max-height: 48px;">
+                    <h1>RadAnalyzer Flashcards</h1>
+                </div>
+                <input type="password" id="pinInput" placeholder="Enter PIN" class="pin-input">
+                <button id="loginBtn" class="login-btn">Login</button>
+                <div style="background: rgba(80,0,0,0.8); border-radius: 12px; padding: 15px; margin-top: 20px; text-align: left;">
+                    <p style="color: white; font-size: 0.85rem; line-height: 1.4; margin: 0;">
+                        💝 This is a free tool from <a href="https://radanalyzer.com" target="_blank" style="color: #ffeb3b; text-decoration: underline;">RadAnalyzer</a>! Your flashcards are protected only by your code - anyone with it can view and edit them. Please be respectful and don't access others' flashcards. Thanks for being awesome! 🙏
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <header class="hidden">
+            <div class="header-brand">
+                <img src="alpha_icon_square.png" alt="RadAnalyzer" class="header-logo">
+                <h1>RadAnalyzer Flashcards</h1>
+            </div>
+            <div id="userInfo" style="background: rgba(255,255,255,0.2); border-radius: 15px; padding: 8px 16px; margin-bottom: 15px; text-align: center;">
+                <span style="color: white; font-size: 0.9rem;">Flashcard code: </span>
+                <span id="userPin" style="color: white; font-weight: bold; font-family: monospace;"></span>
+            </div>
+            <div class="mode-toggle">
+                <button id="studyMode" class="active">Study</button>
+                <button id="endlessMode">Endless</button>
+                <button id="debugMode">Debug</button>
+            </div>
+        </header>
+
+        <div id="uploadSection" class="section hidden">
+            <div class="upload-area">
+                <input type="file" id="csvFile" accept=".csv" hidden>
+                <button onclick="document.getElementById('csvFile').click()" class="upload-btn">
+                    📁 Upload CSV File
+                </button>
+                <div class="upload-description">
+                    <p><strong>What is a CSV file?</strong></p>
+                    <p>A CSV (Comma-Separated Values) file is a simple text file where data is organized in rows and columns, separated by commas.</p>
+                    
+                    <p><strong>Required format:</strong></p>
+                    <p>Your file must have exactly two columns with headers:</p>
+                    <code>word,definition</code>
+                    
+                    <p><strong>Example:</strong></p>
+                    <div class="csv-example">
+                        <code>word,definition<br>
+                        apple,a round fruit that grows on trees<br>
+                        computer,an electronic device for processing data<br>
+                        ocean,a large body of salt water</code>
+                    </div>
+                    
+                    <p><em>You can create this file in Excel, Google Sheets, or any text editor.</em></p>
+                </div>
+                <div id="errorMessage" class="error-message hidden"></div>
+                <div id="csvPreview" class="hidden" style="background: #f0f8ff; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin-top: 20px; text-align: left;">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <span style="color: #2196f3; font-size: 1.2rem; margin-right: 8px;">📄</span>
+                        <strong style="color: #1976d2;">Your CSV Content</strong>
+                    </div>
+                    <div id="csvContent" style="background: white; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 0.85rem; max-height: 150px; overflow-y: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="flashcardSection" class="section hidden">
+            <div class="controls">
+                <div class="small-controls">
+                    <button id="toggleView" class="small-btn" title="Toggle view">🔄</button>
+                    <button id="restartBtn" class="small-btn" title="Restart">↻</button>
+                </div>
+                <button id="manageBtn" class="control-btn">⚙️ Manage</button>
+                <span class="progress" id="progress">0 / 0</span>
+            </div>
+
+            <div class="flashcard" id="flashcard">
+                <div class="card-content">
+                    <div class="card-text" id="cardText"></div>
+                    <button class="flip-btn" id="flipBtn">Flip</button>
+                </div>
+            </div>
+
+            <div class="navigation">
+                <button id="prevBtn" class="nav-btn">← Previous</button>
+                <button id="nextBtn" class="nav-btn">Next →</button>
+            </div>
+
+            <div id="confidenceButtons" class="confidence-buttons hidden">
+                <button id="thumbsDown" class="confidence-btn down">👎 Hard</button>
+                <button id="thumbsUp" class="confidence-btn up">👍 Easy</button>
+            </div>
+
+            <div id="debugInfo" class="debug-info hidden">
+                <div class="debug-text" id="debugText"></div>
+            </div>
+        </div>
+
+        <div id="manageSection" class="section hidden">
+            <div class="manage-container">
+                <h2>Manage Cards</h2>
+                <div class="add-card">
+                    <input type="text" id="newWord" placeholder="Word" class="input-field">
+                    <input type="text" id="newDefinition" placeholder="Definition" class="input-field">
+                    <button id="addCardBtn" class="action-btn add">➕ Add Card</button>
+                </div>
+                <div class="card-list" id="cardList"></div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="saveChanges" class="action-btn">💾 Save Changes</button>
+                    <button id="backToCards" class="action-btn">← Back to Cards</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

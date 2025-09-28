@@ -1,0 +1,17 @@
+{
+  "name": "flashcards",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "preemulators": "cd functions && if [ ! -d venv ]; then python3.11 -m venv venv; fi && . venv/bin/activate && (pip install -r requirements.txt || true) && python ensure_firebase_admin.py",
+    "emulators": "npx firebase-tools@14.2.1 emulators:start"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "firebase-admin": "^12.0.0"
+  }
+}
