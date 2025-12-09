@@ -374,6 +374,25 @@ h1 {
     transform: translateY(-2px);
 }
 
+.save-progress-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    transition: all 0.2s ease;
+    margin: 10px auto;
+    display: block;
+}
+
+.save-progress-btn:hover {
+    transform: translateY(-2px);
+    background: #2563eb;
+}
+
 .debug-info {
     background: rgba(255,255,255,0.9);
     border-radius: 15px;

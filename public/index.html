@@ -41,40 +41,7 @@
             </div>
         </header>
 
-        <div id="uploadSection" class="section hidden">
-            <div class="upload-area">
-                <input type="file" id="csvFile" accept=".csv" hidden>
-                <button onclick="document.getElementById('csvFile').click()" class="upload-btn">
-                    📁 Upload CSV File
-                </button>
-                <div class="upload-description">
-                    <p><strong>What is a CSV file?</strong></p>
-                    <p>A CSV (Comma-Separated Values) file is a simple text file where data is organized in rows and columns, separated by commas.</p>
-                    
-                    <p><strong>Required format:</strong></p>
-                    <p>Your file must have exactly two columns with headers:</p>
-                    <code>word,definition</code>
-                    
-                    <p><strong>Example:</strong></p>
-                    <div class="csv-example">
-                        <code>word,definition<br>
-                        apple,a round fruit that grows on trees<br>
-                        computer,an electronic device for processing data<br>
-                        ocean,a large body of salt water</code>
-                    </div>
-                    
-                    <p><em>You can create this file in Excel, Google Sheets, or any text editor.</em></p>
-                </div>
-                <div id="errorMessage" class="error-message hidden"></div>
-                <div id="csvPreview" class="hidden" style="background: #f0f8ff; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin-top: 20px; text-align: left;">
-                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                        <span style="color: #2196f3; font-size: 1.2rem; margin-right: 8px;">📄</span>
-                        <strong style="color: #1976d2;">Your CSV Content</strong>
-                    </div>
-                    <div id="csvContent" style="background: white; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 0.85rem; max-height: 150px; overflow-y: auto;"></div>
-                </div>
-            </div>
-        </div>
+
 
         <div id="flashcardSection" class="section hidden">
             <div class="controls">
@@ -97,6 +64,8 @@
                 <button id="prevBtn" class="nav-btn">← Previous</button>
                 <button id="nextBtn" class="nav-btn">Next →</button>
             </div>
+
+            <button id="saveProgress" class="save-progress-btn hidden">💾 Save Progress</button>
 
             <div id="confidenceButtons" class="confidence-buttons hidden">
                 <button id="thumbsDown" class="confidence-btn down">👎 Hard</button>

@@ -9,11 +9,11 @@ class FlashcardApp {
         this.debugMode = false;
         this.userPin = null;
         this.pendingCards = [];
+        this.pendingUpdates = new Map();
         this.initializeEventListeners();
     }
 
     initializeEventListeners() {
-        document.getElementById('csvFile').addEventListener('change', (e) => this.handleFileUpload(e));
         document.getElementById('flipBtn').addEventListener('click', () => this.flipCard());
         document.getElementById('prevBtn').addEventListener('click', () => this.previousCard());
         document.getElementById('nextBtn').addEventListener('click', () => this.nextCard());
@@ -28,72 +28,17 @@ class FlashcardApp {
         document.getElementById('addCardBtn').addEventListener('click', () => this.addCard());
         document.getElementById('saveChanges').addEventListener('click', async () => await this.saveChanges());
         document.getElementById('backToCards').addEventListener('click', () => this.showFlashcardSection());
+        document.getElementById('saveProgress').addEventListener('click', async () => await this.saveProgress());
         document.getElementById('loginBtn').addEventListener('click', () => this.login());
         document.getElementById('pinInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.login();
         });
     }
 
-    handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            await this.parseCSV(e.target.result);
-        };
-        reader.readAsText(file);
-    }
-
-    async parseCSV(csvText) {
-        const lines = csvText.trim().split('\n');
-        
-        // Show user's CSV content
-        document.getElementById('csvContent').innerHTML = csvText.split('\n').slice(0, 5).map(line => 
-            `<div style="margin-bottom: 2px;">${line}</div>`
-        ).join('') + (lines.length > 5 ? '<div style="color: #666; font-style: italic;">... and more rows</div>' : '');
-        document.getElementById('csvPreview').classList.remove('hidden');
-        
-        if (lines.length === 0) {
-            this.showError('File is empty');
-            document.getElementById('csvFile').value = '';
-            return;
-        }
-        
-        const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-        if (!headers.includes('word') || !headers.includes('definition')) {
-            this.showError('CSV file must have "word" and "definition" headers');
-            document.getElementById('csvFile').value = '';
-            return;
-        }
-        
-        this.cards = lines.slice(1).map((line, index) => {
-            const [word, definition] = line.split(',').map(item => item.trim().replace(/^"|"$/g, ''));
-            return {
-                id: index,
-                word: word || '',
-                definition: definition || '',
-                confidence: 0.5,
-                correctCount: 0,
-                incorrectCount: 0
-            };
-        }).filter(card => card.word && card.definition);
-
-        if (this.cards.length > 0) {
-            this.hideError();
-            await this.saveState();
-            this.showFlashcardSection();
-            this.currentIndex = 0;
-            this.displayCard();
-        } else {
-            this.showError('No valid cards found in CSV file');
-            document.getElementById('csvFile').value = '';
-        }
-    }
 
     showFlashcardSection() {
         document.getElementById('loginSection').classList.add('hidden');
-        document.getElementById('uploadSection').classList.add('hidden');
         document.getElementById('manageSection').classList.add('hidden');
         document.getElementById('flashcardSection').classList.remove('hidden');
         document.querySelector('header').classList.remove('hidden');
@@ -189,9 +134,11 @@ class FlashcardApp {
             card.confidence = Math.max(0, card.confidence - 0.15);
         }
 
-        await this.saveState();
         if (this.mode === 'endless' || this.mode === 'debug') {
+            this.pendingUpdates.set(card.id, card);
             setTimeout(() => this.nextCard(), 500);
+        } else {
+            await this.saveState();
         }
     }
 
@@ -209,7 +156,13 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
         this.displayCard();
     }
 
-    setMode(mode) {
+    async setMode(mode) {
+        const wasEndless = this.mode === 'endless' || this.mode === 'debug';
+        
+        if (wasEndless && mode === 'study' && this.pendingUpdates.size > 0) {
+            await this.saveProgress();
+        }
+        
         this.mode = mode;
         this.debugMode = mode === 'debug';
         
@@ -219,14 +172,17 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
         
         const prevBtn = document.getElementById('prevBtn');
         const progress = document.getElementById('progress');
+        const saveBtn = document.getElementById('saveProgress');
         
         if (mode === 'endless' || mode === 'debug') {
             prevBtn.style.display = 'none';
             progress.style.display = 'none';
+            saveBtn.classList.remove('hidden');
             this.currentIndex = this.getRandomCardIndex();
         } else {
             prevBtn.style.display = 'block';
             progress.style.display = 'block';
+            saveBtn.classList.add('hidden');
         }
         
         this.isFlipped = false;
@@ -252,6 +208,7 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
     updateConfidenceButtons() {
         const confidenceButtons = document.getElementById('confidenceButtons');
         const debugInfo = document.getElementById('debugInfo');
+        const saveBtn = document.getElementById('saveProgress');
         
         if ((this.mode === 'endless' || this.mode === 'debug') && this.isFlipped) {
             confidenceButtons.classList.remove('hidden');
@@ -265,6 +222,12 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
         } else {
             confidenceButtons.classList.add('hidden');
             debugInfo.classList.add('hidden');
+        }
+        
+        if (saveBtn && this.pendingUpdates.size > 0) {
+            saveBtn.textContent = `💾 Save Progress (${this.pendingUpdates.size})`;
+        } else if (saveBtn) {
+            saveBtn.textContent = '💾 Save Progress';
         }
     }
 
@@ -336,7 +299,10 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
         }
     }
 
-    showManageSection() {
+    async showManageSection() {
+        if (this.pendingUpdates.size > 0) {
+            await this.saveProgress();
+        }
         document.getElementById('flashcardSection').classList.add('hidden');
         document.getElementById('manageSection').classList.remove('hidden');
         this.pendingCards = [...this.cards];
@@ -356,8 +322,10 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
             this.displayCard();
         } else {
             document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('uploadSection').classList.remove('hidden');
+            document.getElementById('manageSection').classList.remove('hidden');
             document.querySelector('header').classList.remove('hidden');
+            this.pendingCards = [];
+            this.renderCardList();
         }
     }
 
@@ -391,8 +359,7 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
         await this.saveState();
         
         if (this.cards.length === 0) {
-            document.getElementById('manageSection').classList.add('hidden');
-            document.getElementById('uploadSection').classList.remove('hidden');
+            alert('Please add at least one card before saving.');
         } else {
             if (this.currentIndex >= this.cards.length) {
                 this.currentIndex = 0;
@@ -402,27 +369,35 @@ button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definition
         }
     }
 
+    async saveProgress() {
+        if (this.pendingUpdates.size === 0) return;
+        
+        this.pendingUpdates.forEach((updatedCard, id) => {
+            const index = this.cards.findIndex(c => c.id === id);
+            if (index !== -1) {
+                this.cards[index] = updatedCard;
+            }
+        });
+        
+        await this.saveState();
+        this.pendingUpdates.clear();
+        this.updateConfidenceButtons();
+    }
+
     renderCardList() {
         const cardList = document.getElementById('cardList');
-        cardList.innerHTML = this.pendingCards.map(card => `
-            <div class="card-item">
-                <div class="card-info">
-                    <strong>${card.word}</strong> - ${card.definition}
+        if (this.pendingCards.length === 0) {
+            cardList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No cards yet. Add your first card above!</p>';
+        } else {
+            cardList.innerHTML = this.pendingCards.map(card => `
+                <div class="card-item">
+                    <div class="card-info">
+                        <strong>${card.word}</strong> - ${card.definition}
+                    </div>
+                    <button class="remove-btn" onclick="app.removeCard(${card.id})">✖</button>
                 </div>
-                <button class="remove-btn" onclick="app.removeCard(${card.id})">✖</button>
-            </div>
-        `).join('');
-    }
-    
-    showError(message) {
-        const errorDiv = document.getElementById('errorMessage');
-        errorDiv.textContent = message;
-        errorDiv.classList.remove('hidden');
-    }
-    
-    hideError() {
-        const errorDiv = document.getElementById('errorMessage');
-        errorDiv.classList.add('hidden');
+            `).join('');
+        }
     }
 }
 

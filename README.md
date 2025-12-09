@@ -4,7 +4,7 @@ A modern, mobile-first flashcard application with Docker support.
 
 ## Features
 
-- **CSV Upload**: Upload word/definition pairs via web interface
+- **Manual Card Management**: Add and remove flashcards directly in the app
 - **Study Mode**: Sequential card review with navigation
 - **Endless Mode**: Random cards based on confidence scoring
 - **Confidence System**: Thumbs up/down affects card frequency
@@ -65,24 +65,14 @@ npm run emulators
 When the emulators are running the web app is available at http://localhost:5002 and API
 requests are rewritten to the local `app` Cloud Function.
 
-## CSV Format
-
-Create a CSV file with headers in the first row:
-
-```csv
-word,definition
-hello,a greeting or expression of goodwill
-world,the earth and all its inhabitants
-computer,an electronic device for processing data
-```
-
 ## Usage
 
-1. Upload your CSV file using the upload button
-2. Choose between Study mode (sequential) or Endless mode (random)
-3. Flip cards to see definitions/words
-4. In Endless mode, use thumbs up/down to adjust card frequency
-5. Cards you struggle with appear more often
+1. Enter your PIN to access your flashcards
+2. Add cards manually using the Manage section (⚙️ button)
+3. Choose between Study mode (sequential) or Endless mode (random)
+4. Flip cards to see definitions/words
+5. In Endless mode, use thumbs up/down to adjust card frequency
+6. Cards you struggle with appear more often
 
 ## Confidence Algorithm
 
