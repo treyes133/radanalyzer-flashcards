@@ -4,96 +4,243 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RadAnalyzer Flashcards</title>
+    <meta name="description" content="AI-powered flashcards for veterinary radiology — built by vets, for vets.">
     <link rel="icon" type="image/png" href="alpha_icon_square.png">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
-    <div class="container">
-        <div id="loginSection" class="section">
-            <div class="login-container">
-                <div class="logo-container">
-                    <img src="alpha_icon_square.png" alt="RadAnalyzer" class="logo" style="width: 48px; height: 48px; max-width: 48px; max-height: 48px;">
-                    <h1>RadAnalyzer Flashcards</h1>
-                </div>
-                <input type="password" id="pinInput" placeholder="Enter PIN" class="pin-input">
-                <button id="loginBtn" class="login-btn">Login</button>
-                <div style="background: rgba(80,0,0,0.8); border-radius: 12px; padding: 15px; margin-top: 20px; text-align: left;">
-                    <p style="color: white; font-size: 0.85rem; line-height: 1.4; margin: 0;">
-                        💝 This is a free tool from <a href="https://radanalyzer.com" target="_blank" style="color: #ffeb3b; text-decoration: underline;">RadAnalyzer</a>! Your flashcards are protected only by your code - anyone with it can view and edit them. Please be respectful and don't access others' flashcards. Thanks for being awesome! 🙏
-                    </p>
-                </div>
-            </div>
-        </div>
 
-        <header class="hidden">
-            <div class="header-brand">
-                <img src="alpha_icon_square.png" alt="RadAnalyzer" class="header-logo">
-                <h1>RadAnalyzer Flashcards</h1>
-            </div>
-            <div id="userInfo" style="background: rgba(255,255,255,0.2); border-radius: 15px; padding: 8px 16px; margin-bottom: 15px; text-align: center;">
-                <span style="color: white; font-size: 0.9rem;">Flashcard code: </span>
-                <span id="userPin" style="color: white; font-weight: bold; font-family: monospace;"></span>
-            </div>
-            <div class="mode-toggle">
-                <button id="studyMode" class="active">Study</button>
-                <button id="endlessMode">Endless</button>
-                <button id="debugMode">Debug</button>
-            </div>
-        </header>
+    <!-- Toast container -->
+    <div id="toastContainer" class="toast-container"></div>
 
+    <!-- ===================== LOGIN SCREEN ===================== -->
+    <div id="loginSection" class="login-screen">
+        <!-- Background decoration -->
+        <div class="login-bg-grain"></div>
+        <div class="glow-orb glow-orb--1"></div>
+        <div class="glow-orb glow-orb--2"></div>
 
+        <div class="login-card">
+            <div class="login-logo">
+                <img src="alpha_icon_square.png" alt="RadAnalyzer" class="login-logo__img">
+            </div>
+            <h1 class="login-title">Flashcards</h1>
+            <p class="login-subtitle">AI tools for vets, designed by vets</p>
 
-        <div id="flashcardSection" class="section hidden">
-            <div class="controls">
-                <div class="small-controls">
-                    <button id="toggleView" class="small-btn" title="Toggle view">🔄</button>
-                    <button id="restartBtn" class="small-btn" title="Restart">↻</button>
-                </div>
-                <button id="manageBtn" class="control-btn">⚙️ Manage</button>
-                <span class="progress" id="progress">0 / 0</span>
+            <div class="login-form">
+                <input type="password" id="pinInput" placeholder="Enter your code" class="input" autocomplete="off">
+                <button id="loginBtn" class="btn btn--primary btn--full">Login</button>
             </div>
 
-            <div class="flashcard" id="flashcard">
-                <div class="card-content">
-                    <div class="card-text" id="cardText"></div>
-                    <button class="flip-btn" id="flipBtn">Flip</button>
-                </div>
+            <div class="login-notice">
+                <p>
+                    This is a free tool from <a href="https://radanalyzer.com" target="_blank" rel="noopener">RadAnalyzer</a>.
+                    Your flashcards are protected only by your code &mdash; please be respectful and don&rsquo;t access others&rsquo; flashcards.
+                </p>
             </div>
 
-            <div class="navigation">
-                <button id="prevBtn" class="nav-btn">← Previous</button>
-                <button id="nextBtn" class="nav-btn">Next →</button>
+            <div class="login-shortcuts">
+                <span class="kbd">Enter</span> to login
             </div>
 
-            <button id="saveProgress" class="save-progress-btn hidden">💾 Save Progress</button>
-
-            <div id="confidenceButtons" class="confidence-buttons hidden">
-                <button id="thumbsDown" class="confidence-btn down">👎 Hard</button>
-                <button id="thumbsUp" class="confidence-btn up">👍 Easy</button>
-            </div>
-
-            <div id="debugInfo" class="debug-info hidden">
-                <div class="debug-text" id="debugText"></div>
-            </div>
-        </div>
-
-        <div id="manageSection" class="section hidden">
-            <div class="manage-container">
-                <h2>Manage Cards</h2>
-                <div class="add-card">
-                    <input type="text" id="newWord" placeholder="Word" class="input-field">
-                    <input type="text" id="newDefinition" placeholder="Definition" class="input-field">
-                    <button id="addCardBtn" class="action-btn add">➕ Add Card</button>
-                </div>
-                <div class="card-list" id="cardList"></div>
-                <div style="display: flex; gap: 10px;">
-                    <button id="saveChanges" class="action-btn">💾 Save Changes</button>
-                    <button id="backToCards" class="action-btn">← Back to Cards</button>
-                </div>
-            </div>
+            <a href="https://radanalyzer.com" target="_blank" rel="noopener" class="login-cta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Explore all RadAnalyzer AI tools
+            </a>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- ===================== APP SHELL ===================== -->
+    <div id="appShell" class="app-shell hidden">
+
+        <!-- Header -->
+        <header id="appHeader" class="app-header">
+            <div class="app-header__inner">
+                <a href="https://radanalyzer.com" target="_blank" rel="noopener" class="app-header__brand" title="Visit RadAnalyzer">
+                    <img src="alpha_icon_square.png" alt="RadAnalyzer" class="app-header__logo">
+                    <span class="app-header__title">Flashcards</span>
+                </a>
+                <div class="app-header__meta">
+                    <span class="app-header__pin" id="userPin"></span>
+                    <button id="logoutBtn" class="btn btn--ghost btn--sm" title="Logout">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mode toggle -->
+            <div class="mode-toggle">
+                <button id="studyMode" class="mode-toggle__btn active" data-mode="study">Study</button>
+                <button id="endlessMode" class="mode-toggle__btn" data-mode="endless">Endless</button>
+                <button id="debugMode" class="mode-toggle__btn" data-mode="debug" style="display:none">Debug</button>
+                <div class="mode-toggle__indicator"></div>
+            </div>
+        </header>
+
+        <!-- ===================== FLASHCARD VIEW ===================== -->
+        <main id="flashcardSection" class="main-content">
+
+            <!-- Controls bar -->
+            <div class="controls-bar">
+                <div class="controls-bar__left">
+                    <button id="toggleView" class="icon-btn" title="Toggle word/definition first">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    </button>
+                    <button id="shuffleBtn" class="icon-btn" title="Shuffle cards">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                    </button>
+                    <button id="restartBtn" class="icon-btn" title="Restart from beginning">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    </button>
+                </div>
+                <div class="controls-bar__right">
+                    <span class="progress-pill" id="progress">0 / 0</span>
+                    <button id="manageBtn" class="btn btn--outline btn--sm">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Manage
+                    </button>
+                </div>
+            </div>
+
+            <!-- Flashcard -->
+            <div class="flashcard-wrapper">
+                <div class="flashcard" id="flashcard">
+                    <div class="flashcard__face flashcard__face--front" id="cardFront">
+                        <span class="flashcard__label" id="cardLabel">WORD</span>
+                        <div class="flashcard__text" id="cardText"></div>
+                        <button class="btn btn--primary" id="flipBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                            Flip
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="card-nav">
+                <button id="prevBtn" class="btn btn--secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Previous
+                </button>
+                <button id="nextBtn" class="btn btn--secondary">
+                    Next
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+            </div>
+
+            <!-- Save progress (endless mode) -->
+            <button id="saveProgress" class="btn btn--accent btn--full hidden">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Progress
+            </button>
+
+            <!-- Confidence buttons (endless mode) -->
+            <div id="confidenceButtons" class="confidence-bar hidden">
+                <button id="thumbsDown" class="btn btn--danger">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Hard
+                </button>
+                <button id="thumbsUp" class="btn btn--success">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Easy
+                </button>
+            </div>
+
+            <!-- Debug info -->
+            <div id="debugInfo" class="debug-panel hidden">
+                <div class="debug-panel__text" id="debugText"></div>
+            </div>
+
+            <!-- Keyboard hints -->
+            <div class="keyboard-hints">
+                <span class="kbd">Space</span> flip
+                <span class="kbd">&larr;</span><span class="kbd">&rarr;</span> navigate
+                <span class="kbd">S</span> shuffle
+            </div>
+        </main>
+
+        <!-- ===================== MANAGE VIEW ===================== -->
+        <div id="manageSection" class="main-content hidden">
+            <div class="manage-panel">
+                <div class="manage-panel__header">
+                    <h2 class="manage-panel__title">Manage Cards</h2>
+                    <button id="backToCards" class="btn btn--ghost btn--sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                        Back
+                    </button>
+                </div>
+
+                <!-- Stats bar -->
+                <div class="stats-bar" id="statsBar">
+                    <div class="stat">
+                        <span class="stat__value" id="statTotal">0</span>
+                        <span class="stat__label">Total</span>
+                    </div>
+                    <div class="stat stat--success">
+                        <span class="stat__value" id="statMastered">0</span>
+                        <span class="stat__label">Mastered</span>
+                    </div>
+                    <div class="stat stat--warning">
+                        <span class="stat__value" id="statLearning">0</span>
+                        <span class="stat__label">Learning</span>
+                    </div>
+                    <div class="stat stat--danger">
+                        <span class="stat__value" id="statNew">0</span>
+                        <span class="stat__label">New</span>
+                    </div>
+                </div>
+
+                <!-- Add card -->
+                <div class="add-card-form">
+                    <div class="add-card-form__fields">
+                        <input type="text" id="newWord" placeholder="Term" class="input">
+                        <input type="text" id="newDefinition" placeholder="Definition" class="input">
+                    </div>
+                    <button id="addCardBtn" class="btn btn--success btn--full">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Card
+                    </button>
+                </div>
+
+                <!-- Search -->
+                <div class="search-box">
+                    <svg class="search-box__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="searchCards" placeholder="Search cards..." class="search-box__input">
+                </div>
+
+                <!-- Card list -->
+                <div class="card-list" id="cardList"></div>
+
+                <!-- Actions -->
+                <div class="manage-panel__actions">
+                    <button id="saveChanges" class="btn btn--primary btn--full">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer CTA -->
+        <footer class="app-footer">
+            <div class="app-footer__inner">
+                <div class="app-footer__text">
+                    <span class="app-footer__label">Built by</span>
+                    <img src="alpha_icon_square.png" alt="" class="app-footer__logo">
+                    <span class="app-footer__brand">RadAnalyzer</span>
+                </div>
+                <a href="https://radanalyzer.com" target="_blank" rel="noopener" class="btn btn--outline btn--sm app-footer__cta">
+                    See our AI tools
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+            </div>
+        </footer>
+
+    </div><!-- /appShell -->
+
+    <script src="script.js?v=8"></script>
 </body>
 </html>

@@ -1,404 +1,670 @@
+/* ================================================================
+   RadAnalyzer Flashcards — v7
+   All user-generated content is escaped via escapeHtml() before
+   DOM insertion to prevent XSS.
+   ================================================================ */
+
 class FlashcardApp {
-    constructor() {
-        this.cards = [];
-        this.currentIndex = 0;
-        this.isFlipped = false;
-        this.showDefinitionsFirst = false;
-        this.mode = 'study';
-        this.lastShownCard = -1;
-        this.debugMode = false;
-        this.userPin = null;
-        this.pendingCards = [];
-        this.pendingUpdates = new Map();
-        this.initializeEventListeners();
-    }
+  constructor() {
+    this.cards = [];
+    this.currentIndex = 0;
+    this.isFlipped = false;
+    this.showDefinitionsFirst = false;
+    this.mode = 'study';
+    this.lastShownCard = -1;
+    this.debugMode = false;
+    this.userPin = null;
+    this.pendingCards = [];
+    this.pendingUpdates = new Map();
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.searchQuery = '';
 
-    initializeEventListeners() {
-        document.getElementById('flipBtn').addEventListener('click', () => this.flipCard());
-        document.getElementById('prevBtn').addEventListener('click', () => this.previousCard());
-        document.getElementById('nextBtn').addEventListener('click', () => this.nextCard());
-        document.getElementById('toggleView').addEventListener('click', () => this.toggleView());
-        document.getElementById('restartBtn').addEventListener('click', () => this.restart());
-        document.getElementById('studyMode').addEventListener('click', () => this.setMode('study'));
-        document.getElementById('endlessMode').addEventListener('click', () => this.setMode('endless'));
-        document.getElementById('debugMode').addEventListener('click', () => this.setMode('debug'));
-        document.getElementById('thumbsUp').addEventListener('click', async () => await this.updateConfidence(true));
-        document.getElementById('thumbsDown').addEventListener('click', async () => await this.updateConfidence(false));
-        document.getElementById('manageBtn').addEventListener('click', () => this.showManageSection());
-        document.getElementById('addCardBtn').addEventListener('click', () => this.addCard());
-        document.getElementById('saveChanges').addEventListener('click', async () => await this.saveChanges());
-        document.getElementById('backToCards').addEventListener('click', () => this.showFlashcardSection());
-        document.getElementById('saveProgress').addEventListener('click', async () => await this.saveProgress());
-        document.getElementById('loginBtn').addEventListener('click', () => this.login());
-        document.getElementById('pinInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.login();
-        });
-    }
+    this.initializeEventListeners();
+    this.initKeyboardShortcuts();
+    this.initSwipeGestures();
+  }
 
+  // ── Event Listeners ─────────────────────────────────────────
 
+  initializeEventListeners() {
+    // Login
+    document.getElementById('loginBtn').addEventListener('click', () => this.login());
+    document.getElementById('pinInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.login();
+    });
 
-    showFlashcardSection() {
-        document.getElementById('loginSection').classList.add('hidden');
-        document.getElementById('manageSection').classList.add('hidden');
-        document.getElementById('flashcardSection').classList.remove('hidden');
-        document.querySelector('header').classList.remove('hidden');
-    }
+    // Flashcard
+    document.getElementById('flipBtn').addEventListener('click', (e) => { e.stopPropagation(); this.flipCard(); });
+    document.getElementById('flashcard').addEventListener('click', () => this.flipCard());
+    document.getElementById('prevBtn').addEventListener('click', () => this.previousCard());
+    document.getElementById('nextBtn').addEventListener('click', () => this.nextCard());
+    document.getElementById('toggleView').addEventListener('click', () => this.toggleView());
+    document.getElementById('shuffleBtn').addEventListener('click', () => this.shuffleCards());
+    document.getElementById('restartBtn').addEventListener('click', () => this.restart());
 
-    displayCard() {
-        if (this.cards.length === 0) return;
+    // Modes
+    document.getElementById('studyMode').addEventListener('click', () => this.setMode('study'));
+    document.getElementById('endlessMode').addEventListener('click', () => this.setMode('endless'));
+    document.getElementById('debugMode').addEventListener('click', () => this.setMode('debug'));
 
-        const card = this.cards[this.currentIndex];
-        const cardText = document.getElementById('cardText');
-        
-        if (this.isFlipped) {
-            cardText.textContent = this.showDefinitionsFirst ? card.word : card.definition;
+    // Confidence
+    document.getElementById('thumbsUp').addEventListener('click', () => this.updateConfidence(true));
+    document.getElementById('thumbsDown').addEventListener('click', () => this.updateConfidence(false));
+    document.getElementById('saveProgress').addEventListener('click', () => this.saveProgress());
+
+    // Manage
+    document.getElementById('manageBtn').addEventListener('click', () => this.showManageSection());
+    document.getElementById('addCardBtn').addEventListener('click', () => this.addCard());
+    document.getElementById('saveChanges').addEventListener('click', () => this.saveChanges());
+    document.getElementById('backToCards').addEventListener('click', () => this.showFlashcardSection());
+    document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+
+    // Search
+    document.getElementById('searchCards').addEventListener('input', (e) => {
+      this.searchQuery = e.target.value.toLowerCase();
+      this.renderCardList();
+    });
+
+    // Add card on Enter in definition field
+    document.getElementById('newDefinition').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.addCard();
+    });
+  }
+
+  initKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Don't trigger if typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      // Don't trigger if on login screen
+      if (!document.getElementById('loginSection').classList.contains('hidden')) return;
+
+      switch (e.key) {
+        case ' ':
+        case 'Enter':
+          e.preventDefault();
+          this.flipCard();
+          break;
+        case 'ArrowRight':
+        case 'l':
+          e.preventDefault();
+          this.nextCard();
+          break;
+        case 'ArrowLeft':
+        case 'h':
+          e.preventDefault();
+          this.previousCard();
+          break;
+        case 's':
+          e.preventDefault();
+          this.shuffleCards();
+          break;
+        case '1':
+          if (this.isFlipped && (this.mode === 'endless' || this.mode === 'debug')) {
+            e.preventDefault();
+            this.updateConfidence(false);
+          }
+          break;
+        case '2':
+          if (this.isFlipped && (this.mode === 'endless' || this.mode === 'debug')) {
+            e.preventDefault();
+            this.updateConfidence(true);
+          }
+          break;
+      }
+    });
+  }
+
+  initSwipeGestures() {
+    const card = document.getElementById('flashcard');
+
+    card.addEventListener('touchstart', (e) => {
+      this.touchStartX = e.changedTouches[0].screenX;
+      this.touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    card.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].screenX - this.touchStartX;
+      const dy = e.changedTouches[0].screenY - this.touchStartY;
+
+      // Only trigger if horizontal swipe is dominant and > 60px
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx > 0) {
+          this.previousCard();
         } else {
-            cardText.textContent = this.showDefinitionsFirst ? card.definition : card.word;
+          this.nextCard();
         }
+      }
+    }, { passive: true });
+  }
 
-        this.updateProgress();
-        this.updateNavigationButtons();
-        this.updateConfidenceButtons();
+  // ── Toast ───────────────────────────────────────────────────
+
+  toast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = `toast toast--${type}`;
+    el.textContent = message;
+    container.appendChild(el);
+
+    setTimeout(() => {
+      el.classList.add('leaving');
+      el.addEventListener('animationend', () => el.remove());
+    }, 2500);
+  }
+
+  // ── Login / Logout ──────────────────────────────────────────
+
+  async login() {
+    const pin = document.getElementById('pinInput').value.trim();
+    if (!pin) {
+      this.toast('Please enter a code', 'error');
+      return;
     }
 
-    flipCard() {
-        this.isFlipped = !this.isFlipped;
-        this.displayCard();
+    this.userPin = pin;
+    document.getElementById('userPin').textContent = pin;
+
+    try {
+      await this.loadState();
+    } catch (err) {
+      // loadState handles its own fallback
     }
 
-    nextCard() {
-        if (this.mode === 'study') {
-            if (this.currentIndex < this.cards.length - 1) {
-                this.currentIndex++;
-            } else {
-                this.currentIndex = 0;
-            }
-        } else {
-            this.currentIndex = this.getRandomCardIndex();
-        }
-        this.isFlipped = false;
-        this.displayCard();
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('appShell').classList.remove('hidden');
+
+    if (this.cards.length > 0) {
+      this.showFlashcardSection();
+      this.displayCard();
+      this.toast(`Loaded ${this.cards.length} cards`, 'success');
+    } else {
+      document.getElementById('flashcardSection').classList.add('hidden');
+      document.getElementById('manageSection').classList.remove('hidden');
+      this.pendingCards = [];
+      this.renderCardList();
+      this.updateStats();
+      this.toast('No cards yet — add some to get started!', 'info');
+    }
+  }
+
+  logout() {
+    this.userPin = null;
+    this.cards = [];
+    this.currentIndex = 0;
+    this.pendingUpdates.clear();
+    document.getElementById('pinInput').value = '';
+    document.getElementById('appShell').classList.add('hidden');
+    document.getElementById('loginSection').classList.remove('hidden');
+  }
+
+  // ── Navigation ──────────────────────────────────────────────
+
+  showFlashcardSection() {
+    document.getElementById('flashcardSection').classList.remove('hidden');
+    document.getElementById('manageSection').classList.add('hidden');
+  }
+
+  displayCard() {
+    if (this.cards.length === 0) return;
+
+    const card = this.cards[this.currentIndex];
+    const cardText = document.getElementById('cardText');
+    const cardLabel = document.getElementById('cardLabel');
+    const flashcard = document.getElementById('flashcard');
+
+    if (this.isFlipped) {
+      cardText.textContent = this.showDefinitionsFirst ? card.word : card.definition;
+      cardLabel.textContent = this.showDefinitionsFirst ? 'TERM' : 'DEFINITION';
+      flashcard.classList.add('flipped');
+    } else {
+      cardText.textContent = this.showDefinitionsFirst ? card.definition : card.word;
+      cardLabel.textContent = this.showDefinitionsFirst ? 'DEFINITION' : 'TERM';
+      flashcard.classList.remove('flipped');
     }
 
-    previousCard() {
-        if (this.mode === 'study') {
-            if (this.currentIndex > 0) {
-                this.currentIndex--;
-            } else {
-                this.currentIndex = this.cards.length - 1;
-            }
-            this.isFlipped = false;
-            this.displayCard();
-        }
+    this.updateProgress();
+    this.updateNavigationButtons();
+    this.updateConfidenceButtons();
+  }
+
+  flipCard() {
+    if (this.cards.length === 0) return;
+    this.isFlipped = !this.isFlipped;
+    this.displayCard();
+  }
+
+  nextCard() {
+    if (this.cards.length === 0) return;
+    if (this.mode === 'study') {
+      this.currentIndex = (this.currentIndex + 1) % this.cards.length;
+    } else {
+      this.currentIndex = this.getRandomCardIndex();
     }
+    this.isFlipped = false;
+    this.displayCard();
+  }
 
-    getRandomCardIndex() {
-        if (this.cards.length <= 1) return 0;
+  previousCard() {
+    if (this.cards.length === 0) return;
+    if (this.mode === 'study') {
+      this.currentIndex = (this.currentIndex - 1 + this.cards.length) % this.cards.length;
+      this.isFlipped = false;
+      this.displayCard();
+    }
+  }
 
-        const weights = this.cards.map(card => {
-            const difficulty = 1 - card.confidence;
-            return Math.max(0.1, difficulty);
-        });
+  shuffleCards() {
+    if (this.cards.length <= 1) return;
+    // Fisher-Yates shuffle
+    for (let i = this.cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+    }
+    this.currentIndex = 0;
+    this.isFlipped = false;
+    this.displayCard();
 
-        let availableIndices = weights.map((_, index) => index)
-            .filter(index => index !== this.lastShownCard);
+    const btn = document.getElementById('shuffleBtn');
+    btn.classList.add('active');
+    setTimeout(() => btn.classList.remove('active'), 600);
+    this.toast('Cards shuffled', 'info');
+  }
 
-        if (availableIndices.length === 0) {
-            availableIndices = weights.map((_, index) => index);
-        }
+  getRandomCardIndex() {
+    if (this.cards.length <= 1) return 0;
 
-        const availableWeights = availableIndices.map(index => weights[index]);
-        const totalWeight = availableWeights.reduce((sum, weight) => sum + weight, 0);
-        let random = Math.random() * totalWeight;
+    const weights = this.cards.map(card => Math.max(0.1, 1 - card.confidence));
+    let available = weights.map((_, i) => i).filter(i => i !== this.lastShownCard);
+    if (available.length === 0) available = weights.map((_, i) => i);
 
-        for (let i = 0; i < availableIndices.length; i++) {
-            random -= availableWeights[i];
-            if (random <= 0) {
-                this.lastShownCard = this.currentIndex;
-                return availableIndices[i];
-            }
-        }
+    const availWeights = available.map(i => weights[i]);
+    const total = availWeights.reduce((s, w) => s + w, 0);
+    let r = Math.random() * total;
 
+    for (let i = 0; i < available.length; i++) {
+      r -= availWeights[i];
+      if (r <= 0) {
         this.lastShownCard = this.currentIndex;
-        return availableIndices[availableIndices.length - 1];
+        return available[i];
+      }
+    }
+    this.lastShownCard = this.currentIndex;
+    return available[available.length - 1];
+  }
+
+  // ── Confidence ──────────────────────────────────────────────
+
+  async updateConfidence(isCorrect) {
+    const card = this.cards[this.currentIndex];
+
+    if (isCorrect) {
+      card.correctCount++;
+      card.confidence = Math.min(1, card.confidence + 0.1);
+    } else {
+      card.incorrectCount++;
+      card.confidence = Math.max(0, card.confidence - 0.15);
     }
 
-    async updateConfidence(isCorrect) {
-        const card = this.cards[this.currentIndex];
-        
-        if (isCorrect) {
-            card.correctCount++;
-            card.confidence = Math.min(1, card.confidence + 0.1);
-        } else {
-            card.incorrectCount++;
-            card.confidence = Math.max(0, card.confidence - 0.15);
-        }
-
-        if (this.mode === 'endless' || this.mode === 'debug') {
-            this.pendingUpdates.set(card.id, card);
-            setTimeout(() => this.nextCard(), 500);
-        } else {
-            await this.saveState();
-        }
+    if (this.mode === 'endless' || this.mode === 'debug') {
+      this.pendingUpdates.set(card.id, card);
+      setTimeout(() => this.nextCard(), 400);
+    } else {
+      await this.saveState();
     }
+  }
 
-    toggleView() {
-        this.showDefinitionsFirst = !this.showDefinitionsFirst;
-        const button = document.getElementById('toggleView');
-button.title = this.showDefinitionsFirst ? 'Show Words First' : 'Show Definitions First';
-        this.isFlipped = false;
-        this.displayCard();
-    }
+  // ── View Controls ───────────────────────────────────────────
 
-    restart() {
-        this.currentIndex = 0;
-        this.isFlipped = false;
-        this.displayCard();
-    }
+  toggleView() {
+    this.showDefinitionsFirst = !this.showDefinitionsFirst;
+    const btn = document.getElementById('toggleView');
+    btn.title = this.showDefinitionsFirst ? 'Show terms first' : 'Show definitions first';
+    btn.classList.toggle('active', this.showDefinitionsFirst);
+    this.isFlipped = false;
+    this.displayCard();
+    this.toast(this.showDefinitionsFirst ? 'Showing definitions first' : 'Showing terms first', 'info');
+  }
 
-    async setMode(mode) {
-        const wasEndless = this.mode === 'endless' || this.mode === 'debug';
-        
-        if (wasEndless && mode === 'study' && this.pendingUpdates.size > 0) {
-            await this.saveProgress();
-        }
-        
-        this.mode = mode;
-        this.debugMode = mode === 'debug';
-        
-        document.getElementById('studyMode').classList.toggle('active', mode === 'study');
-        document.getElementById('endlessMode').classList.toggle('active', mode === 'endless');
-        document.getElementById('debugMode').classList.toggle('active', mode === 'debug');
-        
-        const prevBtn = document.getElementById('prevBtn');
-        const progress = document.getElementById('progress');
-        const saveBtn = document.getElementById('saveProgress');
-        
-        if (mode === 'endless' || mode === 'debug') {
-            prevBtn.style.display = 'none';
-            progress.style.display = 'none';
-            saveBtn.classList.remove('hidden');
-            this.currentIndex = this.getRandomCardIndex();
-        } else {
-            prevBtn.style.display = 'block';
-            progress.style.display = 'block';
-            saveBtn.classList.add('hidden');
-        }
-        
-        this.isFlipped = false;
-        this.displayCard();
+  restart() {
+    this.currentIndex = 0;
+    this.isFlipped = false;
+    this.displayCard();
+    this.toast('Restarted', 'info');
+  }
+
+  async setMode(mode) {
+    const wasEndless = this.mode === 'endless' || this.mode === 'debug';
+
+    if (wasEndless && mode === 'study' && this.pendingUpdates.size > 0) {
+      await this.saveProgress();
     }
 
-    updateProgress() {
-        if (this.mode === 'study') {
-            document.getElementById('progress').textContent = `${this.currentIndex + 1} / ${this.cards.length}`;
-        }
+    this.mode = mode;
+    this.debugMode = mode === 'debug';
+
+    // Update toggle buttons
+    document.querySelectorAll('.mode-toggle__btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+
+    // Move indicator
+    this.updateModeIndicator();
+
+    // Toggle UI elements
+    const prevBtn = document.getElementById('prevBtn');
+    const progress = document.getElementById('progress');
+    const saveBtn = document.getElementById('saveProgress');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+
+    if (mode === 'endless' || mode === 'debug') {
+      prevBtn.style.display = 'none';
+      progress.style.display = 'none';
+      saveBtn.classList.remove('hidden');
+      shuffleBtn.style.display = 'none';
+      this.currentIndex = this.getRandomCardIndex();
+    } else {
+      prevBtn.style.display = '';
+      progress.style.display = '';
+      saveBtn.classList.add('hidden');
+      shuffleBtn.style.display = '';
     }
 
-    updateNavigationButtons() {
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        
-        if (this.mode === 'study') {
-            prevBtn.disabled = false;
-            nextBtn.disabled = false;
-        }
+    this.isFlipped = false;
+    this.displayCard();
+  }
+
+  updateModeIndicator() {
+    const toggle = document.querySelector('.mode-toggle');
+    const indicator = toggle.querySelector('.mode-toggle__indicator');
+    const buttons = toggle.querySelectorAll('.mode-toggle__btn');
+    const visibleButtons = [...buttons].filter(b => b.style.display !== 'none');
+    let activeIdx = visibleButtons.findIndex(b => b.classList.contains('active'));
+    if (activeIdx < 0) activeIdx = 0;
+    indicator.style.width = `calc(${100 / visibleButtons.length}% - 3px)`;
+    indicator.style.transform = `translateX(calc(${activeIdx * 100}% + ${activeIdx * 3}px))`;
+  }
+
+  // ── Progress & UI ───────────────────────────────────────────
+
+  updateProgress() {
+    if (this.mode === 'study') {
+      document.getElementById('progress').textContent = `${this.currentIndex + 1} / ${this.cards.length}`;
+    }
+  }
+
+  updateNavigationButtons() {
+    document.getElementById('prevBtn').disabled = false;
+    document.getElementById('nextBtn').disabled = false;
+  }
+
+  updateConfidenceButtons() {
+    const confidenceButtons = document.getElementById('confidenceButtons');
+    const debugInfo = document.getElementById('debugInfo');
+    const saveBtn = document.getElementById('saveProgress');
+
+    if ((this.mode === 'endless' || this.mode === 'debug') && this.isFlipped) {
+      confidenceButtons.classList.remove('hidden');
+      if (this.mode === 'debug') {
+        debugInfo.classList.remove('hidden');
+        this.updateDebugInfo();
+      } else {
+        debugInfo.classList.add('hidden');
+      }
+    } else {
+      confidenceButtons.classList.add('hidden');
+      debugInfo.classList.add('hidden');
     }
 
-    updateConfidenceButtons() {
-        const confidenceButtons = document.getElementById('confidenceButtons');
-        const debugInfo = document.getElementById('debugInfo');
-        const saveBtn = document.getElementById('saveProgress');
-        
-        if ((this.mode === 'endless' || this.mode === 'debug') && this.isFlipped) {
-            confidenceButtons.classList.remove('hidden');
-            
-            if (this.mode === 'debug') {
-                debugInfo.classList.remove('hidden');
-                this.updateDebugInfo();
-            } else {
-                debugInfo.classList.add('hidden');
-            }
-        } else {
-            confidenceButtons.classList.add('hidden');
-            debugInfo.classList.add('hidden');
-        }
-        
-        if (saveBtn && this.pendingUpdates.size > 0) {
-            saveBtn.textContent = `💾 Save Progress (${this.pendingUpdates.size})`;
-        } else if (saveBtn) {
-            saveBtn.textContent = '💾 Save Progress';
-        }
+    if (saveBtn && this.pendingUpdates.size > 0) {
+      saveBtn.textContent = `Save Progress (${this.pendingUpdates.size})`;
+    }
+  }
+
+  updateDebugInfo() {
+    const card = this.cards[this.currentIndex];
+    const currentProb = this.getCardProbability(this.currentIndex);
+    const upConf = Math.min(1, card.confidence + 0.1);
+    const downConf = Math.max(0, card.confidence - 0.15);
+    const upProb = this.calculateProbability(upConf);
+    const downProb = this.calculateProbability(downConf);
+
+    const debugText = document.getElementById('debugText');
+    debugText.textContent = '';
+
+    const parts = [
+      `Prob: ${(currentProb * 100).toFixed(1)}%`,
+      `Easy: ${(upProb * 100).toFixed(1)}% (${upConf.toFixed(2)})`,
+      `Hard: ${(downProb * 100).toFixed(1)}% (${downConf.toFixed(2)})`
+    ];
+    debugText.textContent = parts.join(' | ');
+  }
+
+  getCardProbability(cardIndex) {
+    const weights = this.cards.map(c => Math.max(0.1, 1 - c.confidence));
+    const total = weights.reduce((s, w) => s + w, 0);
+    return weights[cardIndex] / total;
+  }
+
+  calculateProbability(confidence) {
+    const weight = Math.max(0.1, 1 - confidence);
+    const others = this.cards.map((c, i) => {
+      if (i === this.currentIndex) return weight;
+      return Math.max(0.1, 1 - c.confidence);
+    });
+    const total = others.reduce((s, w) => s + w, 0);
+    return weight / total;
+  }
+
+  // ── Stats ───────────────────────────────────────────────────
+
+  updateStats() {
+    const cards = this.pendingCards.length ? this.pendingCards : this.cards;
+    const total = cards.length;
+    const mastered = cards.filter(c => c.confidence >= 0.8).length;
+    const learning = cards.filter(c => c.confidence > 0.3 && c.confidence < 0.8).length;
+    const newCards = cards.filter(c => c.confidence <= 0.3).length;
+
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statMastered').textContent = mastered;
+    document.getElementById('statLearning').textContent = learning;
+    document.getElementById('statNew').textContent = newCards;
+  }
+
+  // ── Data Persistence ────────────────────────────────────────
+
+  async loadState() {
+    try {
+      const response = await fetch(`/api/cards/${this.userPin}`);
+      if (!response.ok) throw new Error('API error');
+      this.cards = await response.json();
+    } catch {
+      const saved = localStorage.getItem(`flashcards_${this.userPin}`);
+      this.cards = saved ? JSON.parse(saved) : [];
+    }
+  }
+
+  async saveState() {
+    try {
+      await fetch(`/api/cards/${this.userPin}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.cards)
+      });
+    } catch {
+      localStorage.setItem(`flashcards_${this.userPin}`, JSON.stringify(this.cards));
+    }
+  }
+
+  // ── Manage Section ──────────────────────────────────────────
+
+  async showManageSection() {
+    if (this.pendingUpdates.size > 0) {
+      await this.saveProgress();
+    }
+    document.getElementById('flashcardSection').classList.add('hidden');
+    document.getElementById('manageSection').classList.remove('hidden');
+    this.pendingCards = [...this.cards];
+    this.searchQuery = '';
+    document.getElementById('searchCards').value = '';
+    this.renderCardList();
+    this.updateStats();
+  }
+
+  addCard() {
+    const wordEl = document.getElementById('newWord');
+    const defEl = document.getElementById('newDefinition');
+    const word = wordEl.value.trim();
+    const definition = defEl.value.trim();
+
+    if (!word || !definition) {
+      this.toast('Both term and definition are required', 'error');
+      return;
     }
 
-    updateDebugInfo() {
-        const card = this.cards[this.currentIndex];
-        const currentProb = this.getCardProbability(this.currentIndex);
-        
-        const upConfidence = Math.min(1, card.confidence + 0.1);
-        const downConfidence = Math.max(0, card.confidence - 0.15);
-        
-        const upProb = this.calculateProbability(upConfidence);
-        const downProb = this.calculateProbability(downConfidence);
-        
-        document.getElementById('debugText').innerHTML = `
-            <strong>Current:</strong> ${(currentProb * 100).toFixed(1)}% probability<br>
-            <strong>👍 Easy:</strong> ${(upProb * 100).toFixed(1)}% (confidence: ${upConfidence.toFixed(2)})<br>
-            <strong>👎 Hard:</strong> ${(downProb * 100).toFixed(1)}% (confidence: ${downConfidence.toFixed(2)})
-        `;
+    this.pendingCards.push({
+      id: Date.now(),
+      word,
+      definition,
+      confidence: 0.5,
+      correctCount: 0,
+      incorrectCount: 0
+    });
+
+    wordEl.value = '';
+    defEl.value = '';
+    wordEl.focus();
+    this.renderCardList();
+    this.updateStats();
+    this.toast('Card added', 'success');
+  }
+
+  removeCard(id) {
+    this.pendingCards = this.pendingCards.filter(c => c.id !== id);
+    this.renderCardList();
+    this.updateStats();
+  }
+
+  async saveChanges() {
+    this.cards = [...this.pendingCards];
+    if (this.cards.length === 0) {
+      this.toast('Add at least one card before saving', 'error');
+      return;
+    }
+    await this.saveState();
+    if (this.currentIndex >= this.cards.length) this.currentIndex = 0;
+    this.showFlashcardSection();
+    this.displayCard();
+    this.toast(`Saved ${this.cards.length} cards`, 'success');
+  }
+
+  async saveProgress() {
+    if (this.pendingUpdates.size === 0) return;
+
+    this.pendingUpdates.forEach((updatedCard, id) => {
+      const idx = this.cards.findIndex(c => c.id === id);
+      if (idx !== -1) this.cards[idx] = updatedCard;
+    });
+
+    await this.saveState();
+    const count = this.pendingUpdates.size;
+    this.pendingUpdates.clear();
+    this.updateConfidenceButtons();
+    this.toast(`Progress saved (${count} updates)`, 'success');
+  }
+
+  renderCardList() {
+    const cardList = document.getElementById('cardList');
+    let filtered = this.pendingCards;
+
+    if (this.searchQuery) {
+      filtered = filtered.filter(c =>
+        c.word.toLowerCase().includes(this.searchQuery) ||
+        c.definition.toLowerCase().includes(this.searchQuery)
+      );
     }
 
-    getCardProbability(cardIndex) {
-        const weights = this.cards.map(card => {
-            const difficulty = 1 - card.confidence;
-            return Math.max(0.1, difficulty);
-        });
-        
-        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-        return weights[cardIndex] / totalWeight;
+    // Clear existing content
+    cardList.textContent = '';
+
+    if (filtered.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'card-list-empty';
+
+      const iconDiv = document.createElement('div');
+      iconDiv.className = 'card-list-empty__icon';
+      iconDiv.textContent = this.searchQuery ? '🔍' : '📝';
+
+      const msgP = document.createElement('p');
+      msgP.textContent = this.searchQuery
+        ? 'No cards match your search'
+        : 'No cards yet. Add your first card above!';
+
+      emptyDiv.appendChild(iconDiv);
+      emptyDiv.appendChild(msgP);
+      cardList.appendChild(emptyDiv);
+      return;
     }
 
-    calculateProbability(confidence) {
-        const difficulty = 1 - confidence;
-        const weight = Math.max(0.1, difficulty);
-        
-        const otherWeights = this.cards.map((card, index) => {
-            if (index === this.currentIndex) return weight;
-            const otherDifficulty = 1 - card.confidence;
-            return Math.max(0.1, otherDifficulty);
-        });
-        
-        const totalWeight = otherWeights.reduce((sum, w) => sum + w, 0);
-        return weight / totalWeight;
-    }
+    filtered.forEach(card => {
+      const pct = Math.round(card.confidence * 100);
+      const color = pct >= 80 ? 'var(--success)' : pct >= 40 ? 'var(--warning)' : 'var(--danger)';
 
-    async loadState() {
-        try {
-            const response = await fetch(`/api/cards/${this.userPin}`);
-            this.cards = await response.json();
-        } catch (error) {
-            console.log('Loading from localStorage as fallback');
-            const saved = localStorage.getItem(`flashcards_${this.userPin}`);
-            if (saved) {
-                this.cards = JSON.parse(saved);
-            } else {
-                this.cards = [];
-            }
-        }
-    }
+      const item = document.createElement('div');
+      item.className = 'card-item';
 
-    async saveState() {
-        try {
-            await fetch(`/api/cards/${this.userPin}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.cards)
-            });
-        } catch (error) {
-            localStorage.setItem(`flashcards_${this.userPin}`, JSON.stringify(this.cards));
-        }
-    }
+      const info = document.createElement('div');
+      info.className = 'card-item__info';
 
-    async showManageSection() {
-        if (this.pendingUpdates.size > 0) {
-            await this.saveProgress();
-        }
-        document.getElementById('flashcardSection').classList.add('hidden');
-        document.getElementById('manageSection').classList.remove('hidden');
-        this.pendingCards = [...this.cards];
-        this.renderCardList();
-    }
+      const wordDiv = document.createElement('div');
+      wordDiv.className = 'card-item__word';
+      wordDiv.textContent = card.word;
 
-    async login() {
-        const pin = document.getElementById('pinInput').value;
-        if (!pin) return;
-        
-        this.userPin = pin;
-        document.getElementById('userPin').textContent = pin;
-        await this.loadState();
-        
-        if (this.cards.length > 0) {
-            this.showFlashcardSection();
-            this.displayCard();
-        } else {
-            document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('manageSection').classList.remove('hidden');
-            document.querySelector('header').classList.remove('hidden');
-            this.pendingCards = [];
-            this.renderCardList();
-        }
-    }
+      const defDiv = document.createElement('div');
+      defDiv.className = 'card-item__def';
+      defDiv.textContent = card.definition;
 
-    addCard() {
-        const word = document.getElementById('newWord').value.trim();
-        const definition = document.getElementById('newDefinition').value.trim();
-        
-        if (word && definition) {
-            this.pendingCards.push({
-                id: Date.now(),
-                word,
-                definition,
-                confidence: 0.5,
-                correctCount: 0,
-                incorrectCount: 0
-            });
-            
-            document.getElementById('newWord').value = '';
-            document.getElementById('newDefinition').value = '';
-            this.renderCardList();
-        }
-    }
+      info.appendChild(wordDiv);
+      info.appendChild(defDiv);
 
-    removeCard(id) {
-        this.pendingCards = this.pendingCards.filter(card => card.id !== id);
-        this.renderCardList();
-    }
-    
-    async saveChanges() {
-        this.cards = [...this.pendingCards];
-        await this.saveState();
-        
-        if (this.cards.length === 0) {
-            alert('Please add at least one card before saving.');
-        } else {
-            if (this.currentIndex >= this.cards.length) {
-                this.currentIndex = 0;
-            }
-            this.showFlashcardSection();
-            this.displayCard();
-        }
-    }
+      const confDiv = document.createElement('div');
+      confDiv.className = 'card-item__confidence';
+      const confFill = document.createElement('div');
+      confFill.className = 'card-item__confidence-fill';
+      confFill.style.width = pct + '%';
+      confFill.style.background = color;
+      confDiv.appendChild(confFill);
 
-    async saveProgress() {
-        if (this.pendingUpdates.size === 0) return;
-        
-        this.pendingUpdates.forEach((updatedCard, id) => {
-            const index = this.cards.findIndex(c => c.id === id);
-            if (index !== -1) {
-                this.cards[index] = updatedCard;
-            }
-        });
-        
-        await this.saveState();
-        this.pendingUpdates.clear();
-        this.updateConfidenceButtons();
-    }
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'card-item__remove';
+      removeBtn.title = 'Remove card';
+      removeBtn.addEventListener('click', () => this.removeCard(card.id));
 
-    renderCardList() {
-        const cardList = document.getElementById('cardList');
-        if (this.pendingCards.length === 0) {
-            cardList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No cards yet. Add your first card above!</p>';
-        } else {
-            cardList.innerHTML = this.pendingCards.map(card => `
-                <div class="card-item">
-                    <div class="card-info">
-                        <strong>${card.word}</strong> - ${card.definition}
-                    </div>
-                    <button class="remove-btn" onclick="app.removeCard(${card.id})">✖</button>
-                </div>
-            `).join('');
-        }
-    }
+      const removeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      removeSvg.setAttribute('width', '14');
+      removeSvg.setAttribute('height', '14');
+      removeSvg.setAttribute('viewBox', '0 0 24 24');
+      removeSvg.setAttribute('fill', 'none');
+      removeSvg.setAttribute('stroke', 'currentColor');
+      removeSvg.setAttribute('stroke-width', '2');
+      removeSvg.setAttribute('stroke-linecap', 'round');
+      removeSvg.setAttribute('stroke-linejoin', 'round');
+      const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line1.setAttribute('x1', '18'); line1.setAttribute('y1', '6');
+      line1.setAttribute('x2', '6'); line1.setAttribute('y2', '18');
+      const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line2.setAttribute('x1', '6'); line2.setAttribute('y1', '6');
+      line2.setAttribute('x2', '18'); line2.setAttribute('y2', '18');
+      removeSvg.appendChild(line1);
+      removeSvg.appendChild(line2);
+      removeBtn.appendChild(removeSvg);
+
+      item.appendChild(info);
+      item.appendChild(confDiv);
+      item.appendChild(removeBtn);
+      cardList.appendChild(item);
+    });
+  }
 }
 
 const app = new FlashcardApp();
